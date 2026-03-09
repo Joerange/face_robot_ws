@@ -1,0 +1,26 @@
+# 表情库配置
+# servo_id: 1-32，angle: 0-180°，未指定的舵机保持当前位置
+# duration_ms: 过渡时长（可选，默认500ms）
+
+expressions:
+
+  neutral:
+    duration_ms: 500
+    servos: {}    # 所有舵机将陆续填入
+
+  # 以下为占位表情，待你告知舵机编号与关节对应关系后填入
+  smile:
+    duration_ms: 400
+    servos: {}
+
+  frown:
+    duration_ms: 400
+    servos: {}
+
+  surprise:
+    duration_ms: 300
+    servos: {}
+
+  blink:
+    duration_ms: 150
+    servos: {}

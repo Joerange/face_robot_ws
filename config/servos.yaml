@@ -1,0 +1,259 @@
+# 舵机参数配置
+# min/max: 物理限位角度(°)  neutral: 中位角度(已标定)  direction: 已校验
+#
+# direction 语义约定（正方向 = +1）:
+#   眉毛/鼻/颊       → 向上
+#   眼睑             → 张开
+#   眼球 pitch/yaw   → 向上看 / 向左看（机器人视角）
+#   上唇             → 向上
+#   嘴角 ud          → 上扬（微笑方向）
+#   嘴角 fb          → 向前
+#   下唇             → 向下
+#
+# 用法: raw_angle = neutral + direction × semantic_delta
+
+servos:
+  - id: 1 # 角度增大，向上运动
+    joint: right_nose
+    neutral: 90.0
+    min: 80.0
+    max: 160.0
+    direction: 1
+
+  - id: 2 # 角度增大，向上运动
+    joint: right_cheek
+    neutral: 90.0
+    min: 30.0
+    max: 125.0
+    direction: 1
+
+  - id: 3 # 角度增大，向上运动
+    joint: right_eyebow_right
+    neutral: 90.0
+    min: 80.0
+    max: 145.0
+    direction: 1
+
+  - id: 4 # 角度增大，向下运动
+    joint: right_eyebow_left
+    neutral: 90.0
+    min: 70.0
+    max: 105.0
+    direction: -1
+
+  - id: 5 # 角度增大，向下运动
+    joint: left_nose
+    neutral: 90.0
+    min: 20.0
+    max: 110.0
+    direction: -1
+
+  - id: 6 # 角度增大，向下运动
+    joint: left_cheek
+    neutral: 90.0
+    min: 45.0
+    max: 140.0
+    direction: -1
+
+  - id: 7 # 角度增大，向下运动
+    joint: left_eyebow_left
+    neutral: 90.0
+    min: 35.0
+    max: 100.0
+    direction: -1
+
+  - id: 8 # 角度增大，向上运动
+    joint: left_eyebow_right
+    neutral: 90.0
+    min: 74.0
+    max: 113.0
+    direction: 1
+
+  - id: 9 # 角度增大，右眼上眼睑向上运动，眼睛张开
+    joint: right_eyelid_upper
+    neutral: 90.0
+    min: 10.0
+    max: 95.0
+    direction: 1
+
+  - id: 10 # 角度增大，右眼下眼睑向下运动，眼睛张开
+    joint: right_eyelid_lower
+    neutral: 90.0
+    min: 5.0
+    max: 80.0
+    direction: 1
+
+  - id: 11 # 角度增大，左眼上眼睑向下运动，眼睛关闭
+    joint: left_eyelid_upper
+    neutral: 90.0
+    min: 85.0
+    max: 170.0
+    direction: -1
+
+  - id: 12 # 角度增大，左眼下眼睑向上运动，眼睛关闭
+    joint: left_eyelid_lower
+    neutral: 90.0
+    min: 100.0
+    max: 175.0
+    direction: -1
+
+  - id: 13
+    joint: eyeball_pitch
+    neutral: 90.0
+    min: 50.0
+    max: 90.0
+    direction: 1
+    note: "角度减小眼睛向下看"
+
+  - id: 14
+    joint: eyeball_yaw
+    neutral: 80.0
+    min: 60.0
+    max: 100.0
+    direction: 1
+    note: "角度减小向右看，角度增大向左看"
+
+  - id: 15
+    joint: upper_lip_right
+    neutral: 90.0
+    min: 80.0
+    max: 120.0
+    direction: 1
+    note: "角度减小向下"
+
+  - id: 16
+    joint: upper_lip_middle
+    neutral: 90.0
+    min: 60.0
+    max: 105.0
+    direction: -1
+    note: "角度减小向上；当id15与id17向上至最大位置时禁止动作（物理限制）"
+    locked_by: [15, 17]   # id15/17到达上限时此舵机锁定
+
+  - id: 17
+    joint: upper_lip_left
+    neutral: 72.0
+    min: 50.0
+    max: 85.0
+    direction: -1
+    note: "角度减小向上"
+
+  - id: 18
+    joint: right_mouth_corner_ud     # 右嘴角上下（与id19组成右嘴角关节）
+    neutral: 70.0
+    min: 30.0
+    max: 100.0
+    direction: -1
+    note: "角度减小向上"
+
+  - id: 19
+    joint: right_mouth_corner_fb     # 右嘴角前后
+    neutral: 90.0
+    min: 30.0
+    max: 130.0
+    direction: 1
+    note: "角度减小向后"
+
+  - id: 20
+    joint: left_mouth_corner_ud      # 左嘴角上下（与id21组成左嘴角关节）
+    neutral: 105.0
+    min: 70.0
+    max: 140.0
+    direction: 1
+    note: "角度减小向下"
+
+  - id: 21
+    joint: left_mouth_corner_fb      # 左嘴角前后
+    neutral: 90.0
+    min: 50.0
+    max: 150.0
+    direction: -1
+    note: "角度减小向前"
+
+  - id: 22
+    joint: jaw_open
+    neutral: 80.0
+    min: 80.0
+    max: 90.0
+    direction: 1
+    note: "角度减小闭嘴，90度时嘴张最大"
+
+  - id: 23
+    joint: jaw_fb_right              # 下颌前后（右侧）
+    neutral: 90.0
+    min: 90.0
+    max: 90.0
+    direction: 1
+    note: "角度减小下颌向后；暂未标定，锁定在中位"
+
+  - id: 24
+    joint: jaw_fb_left               # 下颌前后（左侧）
+    neutral: 90.0
+    min: 90.0
+    max: 90.0
+    direction: -1
+    note: "角度减小下颌向前；暂未标定，锁定在中位"
+
+  - id: 25
+    joint: jaw_lr                    # 下颌左右
+    neutral: 90.0
+    min: 90.0
+    max: 90.0
+    direction: -1
+    note: "角度减小下颌向右；暂未标定，锁定在中位"
+
+  - id: 26
+    joint: tongue_upper
+    neutral: 90.0
+    min: 90.0
+    max: 90.0
+    direction: -1
+    note: "舌头关节，暂不使用，锁定在中位"
+
+  - id: 27
+    joint: tongue_lower
+    neutral: 90.0
+    min: 90.0
+    max: 90.0
+    direction: -1
+    note: "舌头关节，暂不使用，锁定在中位"
+
+  - id: 28
+    joint: lower_lip_right
+    neutral: 90.0
+    min: 80.0
+    max: 100.0
+    direction: 1
+    note: "角度减小向上"
+
+  - id: 29
+    joint: lower_lip_middle
+    neutral: 90.0
+    min: 70.0
+    max: 110.0
+    direction: 1
+    note: "角度减小向上"
+
+  - id: 30
+    joint: lower_lip_left
+    neutral: 90.0
+    min: 80.0
+    max: 100.0
+    direction: -1
+    note: "角度减小向下"
+
+  - id: 31
+    joint: neck_right
+    neutral: 92.0
+    min: 83.0
+    max: 83.0
+    direction: 1
+    note: "角度减小头向左偏；暂不使用脖子动作，锁定在中位"
+
+  - id: 32
+    joint: neck_left
+    neutral: 83.0
+    min: 92.0
+    max: 92.0
+    direction: -1
+    note: "角度减小向下；暂不使用脖子动作，锁定在中位"

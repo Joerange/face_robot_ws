@@ -1,0 +1,19 @@
+running develop
+running egg_info
+writing face_robot_driver.egg-info/PKG-INFO
+writing dependency_links to face_robot_driver.egg-info/dependency_links.txt
+writing entry points to face_robot_driver.egg-info/entry_points.txt
+writing requirements to face_robot_driver.egg-info/requires.txt
+writing top-level names to face_robot_driver.egg-info/top_level.txt
+reading manifest file 'face_robot_driver.egg-info/SOURCES.txt'
+writing manifest file 'face_robot_driver.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face-robot-driver.egg-link (link to .)
+Installing driver_node script to /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/face_robot_driver
+Installing expression_node script to /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/face_robot_driver
+Installing eye_node script to /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/face_robot_driver
+
+Installed /home/tuf/Mark/face_robot_ws/build/face_robot_driver
+running symlink_data
+symbolically linking /home/tuf/Mark/face_robot_ws/build/face_robot_driver/resource/face_robot_driver -> /home/tuf/Mark/face_robot_ws/install/face_robot_driver/share/ament_index/resource_index/packages
+symbolically linking /home/tuf/Mark/face_robot_ws/build/face_robot_driver/package.xml -> /home/tuf/Mark/face_robot_ws/install/face_robot_driver/share/face_robot_driver

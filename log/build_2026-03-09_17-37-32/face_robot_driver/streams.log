@@ -1,0 +1,31 @@
+[0.607s] Invoking command in '/home/tuf/Mark/face_robot_ws/src/face_robot_driver': PYTHONPATH=/home/tuf/Mark/face_robot_ws/build/face_robot_driver/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/face_robot_driver build --build-base /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build install --record /home/tuf/Mark/face_robot_ws/build/face_robot_driver/install.log --single-version-externally-managed install_data
+[0.810s] running egg_info
+[0.810s] writing ../../build/face_robot_driver/face_robot_driver.egg-info/PKG-INFO
+[0.810s] writing dependency_links to ../../build/face_robot_driver/face_robot_driver.egg-info/dependency_links.txt
+[0.810s] writing entry points to ../../build/face_robot_driver/face_robot_driver.egg-info/entry_points.txt
+[0.810s] writing requirements to ../../build/face_robot_driver/face_robot_driver.egg-info/requires.txt
+[0.810s] writing top-level names to ../../build/face_robot_driver/face_robot_driver.egg-info/top_level.txt
+[0.812s] reading manifest file '../../build/face_robot_driver/face_robot_driver.egg-info/SOURCES.txt'
+[0.812s] writing manifest file '../../build/face_robot_driver/face_robot_driver.egg-info/SOURCES.txt'
+[0.813s] running build
+[0.813s] running build_py
+[0.813s] copying face_robot_driver/servo_config.py -> /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build/lib/face_robot_driver
+[0.813s] copying face_robot_driver/driver_node.py -> /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build/lib/face_robot_driver
+[0.813s] copying face_robot_driver/expression_node.py -> /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build/lib/face_robot_driver
+[0.813s] running install
+[0.814s] running install_lib
+[0.814s] copying /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build/lib/face_robot_driver/servo_config.py -> /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver
+[0.814s] copying /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build/lib/face_robot_driver/driver_node.py -> /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver
+[0.814s] copying /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build/lib/face_robot_driver/expression_node.py -> /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver
+[0.815s] byte-compiling /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver/servo_config.py to servo_config.cpython-310.pyc
+[0.816s] byte-compiling /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver/driver_node.py to driver_node.cpython-310.pyc
+[0.817s] byte-compiling /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver/expression_node.py to expression_node.cpython-310.pyc
+[0.817s] running install_data
+[0.817s] running install_egg_info
+[0.819s] removing '/home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver-0.1.0-py3.10.egg-info' (and everything under it)
+[0.819s] Copying ../../build/face_robot_driver/face_robot_driver.egg-info to /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages/face_robot_driver-0.1.0-py3.10.egg-info
+[0.820s] running install_scripts
+[0.836s] Installing driver_node script to /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/face_robot_driver
+[0.836s] Installing expression_node script to /home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/face_robot_driver
+[0.836s] writing list of installed files to '/home/tuf/Mark/face_robot_ws/build/face_robot_driver/install.log'
+[0.851s] Invoked command in '/home/tuf/Mark/face_robot_ws/src/face_robot_driver' returned '0': PYTHONPATH=/home/tuf/Mark/face_robot_ws/build/face_robot_driver/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/tuf/Mark/face_robot_ws/install/face_robot_driver/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/face_robot_driver build --build-base /home/tuf/Mark/face_robot_ws/build/face_robot_driver/build install --record /home/tuf/Mark/face_robot_ws/build/face_robot_driver/install.log --single-version-externally-managed install_data
