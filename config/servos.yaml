@@ -69,32 +69,60 @@ servos:
     max: 113.0
     direction: 1
 
+  # - id: 9 # 角度增大，右眼上眼睑向上运动，眼睛张开
+  #   joint: right_eyelid_upper
+  #   neutral: 90.0
+  #   min: 10.0
+  #   max: 95.0
+  #   direction: 1
+
+  # - id: 10 # 角度增大，右眼下眼睑向下运动，眼睛张开
+  #   joint: right_eyelid_lower
+  #   neutral: 90.0
+  #   min: 5.0
+  #   max: 80.0
+  #   direction: 1
+
+  # - id: 11 # 角度增大，左眼上眼睑向下运动，眼睛关闭
+  #   joint: left_eyelid_upper
+  #   neutral: 90.0
+  #   min: 85.0
+  #   max: 170.0
+  #   direction: -1
+
+  # - id: 12 # 角度增大，左眼下眼睑向上运动，眼睛关闭
+  #   joint: left_eyelid_lower
+  #   neutral: 90.0
+  #   min: 100.0
+  #   max: 175.0
+  #   direction: -1
+
   - id: 9 # 角度增大，右眼上眼睑向上运动，眼睛张开
     joint: right_eyelid_upper
-    neutral: 90.0
-    min: 10.0
-    max: 95.0
+    neutral: 75.0
+    min: 0.0
+    max: 75.0
     direction: 1
 
   - id: 10 # 角度增大，右眼下眼睑向下运动，眼睛张开
     joint: right_eyelid_lower
-    neutral: 90.0
-    min: 5.0
-    max: 80.0
+    neutral: 45.0
+    min: 0.0
+    max: 45.0
     direction: 1
 
   - id: 11 # 角度增大，左眼上眼睑向下运动，眼睛关闭
     joint: left_eyelid_upper
-    neutral: 90.0
-    min: 85.0
-    max: 170.0
+    neutral: 110.0
+    min: 110.0
+    max: 180.0
     direction: -1
 
   - id: 12 # 角度增大，左眼下眼睑向上运动，眼睛关闭
     joint: left_eyelid_lower
-    neutral: 90.0
-    min: 100.0
-    max: 175.0
+    neutral: 135.0
+    min: 135.0
+    max: 180.0
     direction: -1
 
   - id: 13
@@ -244,16 +272,16 @@ servos:
 
   - id: 31
     joint: neck_right
-    neutral: 92.0
-    min: 83.0
-    max: 83.0
+    neutral: 95.0
+    min: 95.0
+    max: 95.0
     direction: 1
-    note: "角度减小头向左偏；暂不使用脖子动作，锁定在中位"
+    note: "角度减小头向上；暂不使用脖子动作，锁定在中位"
 
   - id: 32
     joint: neck_left
-    neutral: 83.0
-    min: 92.0
-    max: 92.0
+    neutral: 84.0
+    min: 84.0
+    max: 84.0
     direction: -1
     note: "角度减小向下；暂不使用脖子动作，锁定在中位"
