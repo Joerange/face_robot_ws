@@ -169,6 +169,17 @@ class EyeController:
         self._pitch = pitch
         self._yaw   = yaw
 
+    def set_gaze_instant(self, pitch: float, yaw: float) -> None:
+        """
+        立即将眼球设置到目标位置（无动画），用于实时追踪。
+        线程安全：可在摄像头线程中频繁调用。
+        """
+        pitch = max(-1.0, min(1.0, float(pitch)))
+        yaw   = max(-1.0, min(1.0, float(yaw)))
+        self._pitch = pitch
+        self._yaw   = yaw
+        self._push_eye_angles(self._compute_angles(pitch, yaw, self._lid_open))
+
     def center_gaze(self, duration_ms: float = 200.0):
         """眼球回正中。"""
         self.set_gaze(0.0, 0.0, duration_ms)
