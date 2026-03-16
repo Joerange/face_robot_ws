@@ -15,7 +15,7 @@ setup(
         (os.path.join('share', package_name, 'launch'),
             glob('launch/*.launch.py')),
     ],
-    install_requires=['setuptools', 'pyserial', 'pyyaml', 'opencv-python'],
+    install_requires=['setuptools', 'pyserial', 'pyyaml', 'opencv-python', 'mediapipe'],
     zip_safe=True,
     maintainer='user',
     maintainer_email='user@todo.todo',
@@ -27,6 +27,7 @@ setup(
             'driver_node      = face_robot_driver.driver_node:main',
             'eye_node         = face_robot_driver.eye_node:main',
             'face_tracker     = face_robot_driver.face_tracker_node:main',
+            'emotion_mirror   = face_robot_driver.emotion_mirror_node:main',
         ],
     },
 )

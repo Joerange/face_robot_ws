@@ -25,6 +25,8 @@
 face_robot_ws/
 ├── config/
 │   └── servos.yaml             # 舵机参数：限位 / 方向 / 中位
+├── models/
+│   └── face_landmarker.task    # MediaPipe FaceLandmarker 模型
 ├── src/
 │   └── face_robot_driver/      # 核心 ROS 2 包（ament_python）
 │       ├── face_robot_driver/
@@ -33,10 +35,14 @@ face_robot_ws/
 │       │   ├── driver_node.py        # ROS 2 驱动节点：接收角度指令 → 串口下发
 │       │   ├── eye_controller.py     # 眼部逻辑：凝视/眨眼/眼睑耦合/自动闲置
 │       │   ├── eye_node.py           # ROS 2 眼部节点：手动调试用
-│       │   └── face_tracker_node.py  # ROS 2 追踪节点：摄像头人脸检测 → 眼球追踪
+│       │   ├── face_tracker_node.py  # ROS 2 追踪节点：Haar 级联 → 眼球追踪
+│       │   ├── expressions.py        # 共享表情预设（happy/angry/sad）
+│       │   ├── emotion_detector.py   # 情绪检测：FaceLandmarker + 分类 + 滤波
+│       │   └── emotion_mirror_node.py # ROS 2 情绪镜像节点：识别情绪 → 表情跟随
 │       ├── scripts/
 │       │   ├── test_servo.py         # 舵机独立测试（不依赖 ROS）
-│       │   └── test_eye.py           # 眼部独立测试（不依赖 ROS）
+│       │   ├── test_eye.py           # 眼部独立测试（不依赖 ROS）
+│       │   └── test_expression.py    # 表情独立测试（不依赖 ROS）
 │       ├── package.xml
 │       └── setup.py
 └── README.md
@@ -47,27 +53,33 @@ face_robot_ws/
 ## 软件层次图
 
 ```
-【人脸追踪模式】
+【情绪镜像模式】（当前主要模式）
 
-┌──────────────────────────────────┐
-│        face_tracker_node         │  摄像头 + MediaPipe 人脸检测
-│  比例控制器 + EyeController       │  无人脸时自动进入闲置模式
-└──────────────┬───────────────────┘
+┌───────────────────────────────────┐
+│       emotion_mirror_node         │  摄像头 + FaceLandmarker
+│  blendshapes → 情绪分类 → EMA滤波  │  happy/angry/sad/neutral
+│  smoothstep 过渡 → 表情舵机角度     │  舵机 1-8, 15-22, 28-30
+└──────────────┬────────────────────┘
                │  /face/servo_angles  (Float32MultiArray, 32×float)
                ▼
-┌──────────────────────────────────┐
-│           driver_node            │  50 Hz 控制循环
-│  watchdog / 软限位 / 急停         │  超时自动回 neutral
-└──────────────┬───────────────────┘
+┌───────────────────────────────────┐
+│           driver_node             │  50 Hz 控制循环
+│  watchdog / 软限位 / 急停          │  超时自动回 neutral
+└──────────────┬────────────────────┘
                │  HEX 指令（65字节，USB-Serial 460800 8N1）
                ▼
-┌──────────────────────────────────┐
-│         POM SC32 驱动板           │  32路 PWM 舵机输出
-└──────────────────────────────────┘
+┌───────────────────────────────────┐
+│         POM SC32 驱动板            │  32路 PWM 舵机输出
+└───────────────────────────────────┘
+
+【眼球追踪模式】
+
+face_tracker_node ──/face/servo_angles──→ driver_node → 硬件
+  (Haar 级联 + 比例控制器，控制眼部舵机 9-14)
 
 【手动调试模式】
 
-eye_node  ──/face/servo_angles──→  driver_node  →  硬件
+eye_node ──/face/servo_angles──→ driver_node → 硬件
 ```
 
 ---
@@ -78,7 +90,8 @@ eye_node  ──/face/servo_angles──→  driver_node  →  硬件
 
 | 话题 | 类型 | 说明 |
 |------|------|------|
-| `/face/servo_angles` | `Float32MultiArray` | 32路角度(°)，索引0对应舵机1，由 face_tracker 或 eye_node 发布 |
+| `/face/servo_angles` | `Float32MultiArray` | 32路角度(°)，索引0对应舵机1 |
+| `/face/detected_emotion` | `String` | 当前识别情绪 (happy/angry/sad/neutral)，emotion_mirror 发布 |
 | `/face/eye/gaze_cmd` | `Float32MultiArray` | `[pitch, yaw]` 或 `[pitch, yaw, duration_ms]`，eye_node 订阅 |
 
 ### 服务
@@ -114,13 +127,26 @@ eye_node  ──/face/servo_angles──→  driver_node  →  硬件
 | `show_preview` | `false` | 显示摄像头检测预览窗口 |
 | `servos_yaml` | `~/Mark/face_robot_ws/config/servos.yaml` | 舵机参数路径 |
 
+**emotion_mirror_node**
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `camera_index` | `0` | 摄像头编号 |
+| `model_path` | `~/Mark/face_robot_ws/models/face_landmarker.task` | FaceLandmarker 模型路径 |
+| `ema_alpha` | `0.3` | EMA 平滑系数，越小越稳定 |
+| `min_hold_s` | `0.5` | 情绪切换最小间隔(s) |
+| `confidence_threshold` | `0.25` | 切换所需分数差 |
+| `transition_duration` | `0.6` | 表情过渡时长(s) |
+| `show_preview` | `true` | 显示预览窗口（含情绪分数条） |
+| `servos_yaml` | `~/Mark/face_robot_ws/config/servos.yaml` | 舵机参数路径 |
+
 ---
 
 ## 环境准备
 
 ```bash
 # Python 依赖
-pip3 install pyserial pyyaml mediapipe
+pip3 install pyserial pyyaml mediapipe "numpy<2"
 
 # 串口权限（需重新登录生效，或用 newgrp dialout 立即生效）
 sudo usermod -a -G dialout $USER
@@ -185,13 +211,41 @@ python3 src/face_robot_driver/scripts/test_eye.py --port /dev/ttyUSB0 --idle
 
 **建议测试顺序：** `--center` → `--blink` → `--gaze -0.5 0`（观察眼睑耦合）→ `--idle`
 
+### 表情动作测试
+
+```bash
+# 顺序展示：开心 → 正常 → 生气 → 正常 → 伤心 → 正常（每个 5 秒）
+python3 src/face_robot_driver/scripts/test_expression.py --port /dev/ttyUSB0
+
+# 循环播放
+python3 src/face_robot_driver/scripts/test_expression.py --port /dev/ttyUSB0 --loop
+
+# 单独展示某表情（保持直到 Ctrl+C）
+python3 src/face_robot_driver/scripts/test_expression.py --port /dev/ttyUSB0 --hold happy
+python3 src/face_robot_driver/scripts/test_expression.py --port /dev/ttyUSB0 --hold angry
+python3 src/face_robot_driver/scripts/test_expression.py --port /dev/ttyUSB0 --hold sad
+
+# 调整每个表情保持时间
+python3 src/face_robot_driver/scripts/test_expression.py --port /dev/ttyUSB0 --duration 3
+```
+
+**表情涉及的舵机区域：**
+
+| 区域 | 舵机 ID | 说明 |
+|------|---------|------|
+| 眉毛 | 3, 4, 7, 8 | 左右眉各2路（内/外侧），控制眉形 |
+| 鼻/颊 | 1, 2, 5, 6 | 鼻翼皱起、脸颊提升 |
+| 嘴角 | 18, 19, 20, 21 | 左右嘴角各2路（上下/前后） |
+| 上唇 | 15, 16, 17 | 左中右三段 |
+| 下唇 | 28, 29, 30 | 左中右三段 |
+
 ---
 
 ## 启动 ROS 2 节点
 
-### 人脸追踪模式（常用）
+### 情绪镜像模式（当前主要模式）
 
-需要 **两个终端**，均需先 source 环境：
+识别人脸情绪，机器人跟随做出相同表情。需要 **两个终端**，均需先 source：
 
 ```bash
 source /opt/ros/humble/setup.bash && source ~/Mark/face_robot_ws/install/setup.bash
@@ -202,17 +256,26 @@ source /opt/ros/humble/setup.bash && source ~/Mark/face_robot_ws/install/setup.b
 ros2 run face_robot_driver driver_node
 ```
 
-**终端 2 — 人脸追踪节点**
+**终端 2 — 情绪镜像节点**
 ```bash
-# 基础启动
-ros2 run face_robot_driver face_tracker
+# 启动（默认开启预览窗口，显示情绪分数条）
+ros2 run face_robot_driver emotion_mirror
 
-# 开启预览窗口（调试用）
+# 调整滤波参数（更稳定 / 更灵敏）
+ros2 run face_robot_driver emotion_mirror --ros-args \
+  -p ema_alpha:=0.2 -p min_hold_s:=0.8
+
+# 监控识别到的情绪
+ros2 topic echo /face/detected_emotion
+```
+
+### 眼球追踪模式
+
+摄像头检测人脸位置，眼球跟随注视。与情绪镜像共用摄像头，不可同时运行。
+
+**终端 2 — 追踪节点**
+```bash
 ros2 run face_robot_driver face_tracker --ros-args -p show_preview:=true
-
-# 调整追踪参数
-ros2 run face_robot_driver face_tracker --ros-args \
-  -p show_preview:=true -p kp:=0.12 -p deadzone_px:=20
 ```
 
 ### 手动调试模式（eye_node）
@@ -301,19 +364,29 @@ duty = round(angle × 5 / 9 + 25)
 
 ## 里程碑进度
 
-### M1 — 当前阶段
+### M1 — 基础控制（已完成）
 
 - [x] 协议层 `pom_sc32.py`：HEX 批量指令，fire-and-forget
 - [x] 软限位模块 `servo_config.py`：clamp / locked_by / neutral 管理
 - [x] ROS 2 驱动节点 `driver_node`：50Hz 控制循环、watchdog、急停
 - [x] 32路关节命名与物理限位标定（servos.yaml）
+
+### M2 — 眼部控制 + 追踪（已完成）
+
 - [x] 眼部控制器 `eye_controller.py`：凝视、眼睑耦合、眨眼、自动闲置
-- [x] ROS 2 眼部节点 `eye_node`（手动调试）
-- [x] 人脸追踪节点 `face_tracker_node`：MediaPipe 检测 + 比例控制器 + 自动闲置切换
-- [ ] 追踪参数调优（kp、deadzone）
-- [ ] 眼部耦合系数调优（upper/lower coupling、眨眼时序）
+- [x] 人脸追踪节点 `face_tracker_node`：Haar 级联 + 比例控制器
 
-### M2 — 计划中
+### M3 — 表情 + 情绪镜像（当前阶段）
 
+- [x] 表情预设 `expressions.py`：happy/angry/sad，smoothstep 过渡
+- [x] 表情测试脚本 `test_expression.py`
+- [x] 情绪检测器 `emotion_detector.py`：FaceLandmarker blendshapes + 分类 + EMA 滤波
+- [x] 情绪镜像节点 `emotion_mirror_node.py`：识别情绪 → 机器人跟随表情
+- [ ] 情绪分类权重调优（根据实测调整 blendshape 权重）
+- [ ] 表情角度参数调优（根据物理测试微调各舵机值）
+
+### M4 — 计划中
+
+- [ ] 情绪镜像 + 眼球追踪联动（合并为单节点）
 - [ ] 速度限制（每周期最大角度增量，防抖动）
-- [ ] Launch 文件（一键启动 driver_node + face_tracker）
+- [ ] Launch 文件（一键启动）
