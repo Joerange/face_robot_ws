@@ -1,6 +1,6 @@
 # Face Robot — 人脸机器人软件栈
 
-> 基于 Ubuntu 22.04 + ROS 2 Humble，驱动 POM SC32 32路舵机控制器，通过眼部舵机实现人脸追踪与自然眼部动作。
+> 基于 Ubuntu 22.04 + ROS 2 Humble，驱动 POM SC32 32路舵机控制器，实现人脸追踪、情绪镜像表情、语音对话。
 
 ---
 
@@ -38,7 +38,10 @@ face_robot_ws/
 │       │   ├── face_tracker_node.py  # ROS 2 追踪节点：Haar 级联 → 眼球追踪
 │       │   ├── expressions.py        # 共享表情预设（happy/angry/sad）
 │       │   ├── emotion_detector.py   # 情绪检测：FaceLandmarker + 分类 + 滤波
-│       │   └── emotion_mirror_node.py # ROS 2 情绪镜像节点：识别情绪 → 表情跟随
+│       │   ├── emotion_mirror_node.py # ROS 2 情绪镜像节点：识别情绪 → 表情跟随
+│       │   ├── doubao_protocol.py    # 豆包 Realtime Dialog 二进制协议
+│       │   ├── doubao_client.py      # 豆包 WebSocket 客户端
+│       │   └── voice_dialog_node.py  # ROS 2 语音对话节点：麦克风 → 豆包 → 扬声器
 │       ├── scripts/
 │       │   ├── test_servo.py         # 舵机独立测试（不依赖 ROS）
 │       │   ├── test_eye.py           # 眼部独立测试（不依赖 ROS）
@@ -77,6 +80,12 @@ face_robot_ws/
 face_tracker_node ──/face/servo_angles──→ driver_node → 硬件
   (Haar 级联 + 比例控制器，控制眼部舵机 9-14)
 
+【语音对话模式】
+
+voice_dialog_node ──WebSocket──→ 豆包 Realtime Dialog API
+  麦克风 PCM(16kHz) → ASR → LLM → TTS → 扬声器 PCM(24kHz)
+  发布: /face/voice/user_text, /face/voice/bot_text
+
 【手动调试模式】
 
 eye_node ──/face/servo_angles──→ driver_node → 硬件
@@ -93,6 +102,10 @@ eye_node ──/face/servo_angles──→ driver_node → 硬件
 | `/face/servo_angles` | `Float32MultiArray` | 32路角度(°)，索引0对应舵机1 |
 | `/face/detected_emotion` | `String` | 当前识别情绪 (happy/angry/sad/neutral)，emotion_mirror 发布 |
 | `/face/eye/gaze_cmd` | `Float32MultiArray` | `[pitch, yaw]` 或 `[pitch, yaw, duration_ms]`，eye_node 订阅 |
+| `/face/voice/user_text` | `String` | 用户语音识别文本 / 文字输入，voice_dialog 发布 |
+| `/face/voice/bot_text` | `String` | 机器人回复文本（流式分片），voice_dialog 发布 |
+| `/face/voice/status` | `String` | 语音对话连接状态，voice_dialog 发布 |
+| `/face/voice/text_input` | `String` | 文字输入（voice_dialog 订阅，text 模式下使用） |
 
 ### 服务
 
@@ -140,13 +153,30 @@ eye_node ──/face/servo_angles──→ driver_node → 硬件
 | `show_preview` | `true` | 显示预览窗口（含情绪分数条） |
 | `servos_yaml` | `~/Mark/face_robot_ws/config/servos.yaml` | 舵机参数路径 |
 
+**voice_dialog_node**
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `app_id` | `6496508405` | 豆包 APP ID |
+| `access_key` | *(见 CLAUDE.md)* | 豆包 Access Key |
+| `speaker` | `zh_male_yunzhou_jupiter_bigtts` | TTS 音色 |
+| `system_role` | *(内置)* | 系统角色设定 |
+| `bot_name` | *(空)* | 机器人名称 |
+| `input_mode` | `audio` | 输入模式: `audio`=麦克风, `text`=文字 |
+| `sample_rate_in` | `16000` | 麦克风采样率(Hz) |
+| `sample_rate_out` | `24000` | 播放采样率(Hz) |
+| `chunk_size` | `3200` | 每次采集帧数 |
+
 ---
 
 ## 环境准备
 
 ```bash
 # Python 依赖
-pip3 install pyserial pyyaml mediapipe "numpy<2"
+pip3 install pyserial pyyaml mediapipe "numpy<2" "websockets>=11,<13"
+
+# 音频依赖（优先 apt）
+sudo apt install -y python3-pyaudio
 
 # 串口权限（需重新登录生效，或用 newgrp dialout 立即生效）
 sudo usermod -a -G dialout $USER
@@ -304,6 +334,41 @@ ros2 service call /face/eye/idle_on  std_srvs/srv/Trigger
 ros2 service call /face/eye/idle_off std_srvs/srv/Trigger
 ```
 
+### 语音对话模式
+
+通过豆包大模型实现实时语音/文字对话。支持两种输入模式：
+
+**语音模式（默认）— 麦克风输入**
+```bash
+source /opt/ros/humble/setup.bash && source ~/Mark/face_robot_ws/install/setup.bash
+
+# 启动（麦克风模式，默认）
+ros2 run face_robot_driver voice_dialog
+
+# 自定义音色或角色
+ros2 run face_robot_driver voice_dialog --ros-args \
+  -p speaker:=zh_female_wanwanxiaohe_moon_bigtts \
+  -p system_role:="你是一个可爱的机器人，说话简短有趣。"
+```
+
+**文字模式 — 通过话题输入文字**
+```bash
+# 启动文字模式（无需麦克风；不会发送默认 SayHello）
+ros2 run face_robot_driver voice_dialog --ros-args -p input_mode:=text
+
+# 在另一个终端发送文字
+ros2 topic pub --once /face/voice/text_input std_msgs/String "data: '你好，请介绍一下你自己'"
+```
+
+**监控对话内容**
+```bash
+ros2 topic echo /face/voice/user_text    # 用户语音识别 / 文字输入
+ros2 topic echo /face/voice/bot_text     # 机器人回复
+ros2 topic echo /face/voice/status       # 连接状态
+```
+
+`audio` 模式下节点会先播放默认欢迎语，收到 `/face/voice/status = input_ready` 后才开始接收后续输入，避免欢迎语 TTS 与用户请求重叠。
+
 ### 急停与恢复
 
 ```bash
@@ -376,17 +441,19 @@ duty = round(angle × 5 / 9 + 25)
 - [x] 眼部控制器 `eye_controller.py`：凝视、眼睑耦合、眨眼、自动闲置
 - [x] 人脸追踪节点 `face_tracker_node`：Haar 级联 + 比例控制器
 
-### M3 — 表情 + 情绪镜像（当前阶段）
+### M3 — 表情 + 情绪镜像（已完成）
 
 - [x] 表情预设 `expressions.py`：happy/angry/sad，smoothstep 过渡
 - [x] 表情测试脚本 `test_expression.py`
 - [x] 情绪检测器 `emotion_detector.py`：FaceLandmarker blendshapes + 分类 + EMA 滤波
 - [x] 情绪镜像节点 `emotion_mirror_node.py`：识别情绪 → 机器人跟随表情
-- [ ] 情绪分类权重调优（根据实测调整 blendshape 权重）
-- [ ] 表情角度参数调优（根据物理测试微调各舵机值）
 
-### M4 — 计划中
+### M4 — 语音对话（当前阶段）
 
-- [ ] 情绪镜像 + 眼球追踪联动（合并为单节点）
-- [ ] 速度限制（每周期最大角度增量，防抖动）
+- [x] 豆包协议层 `doubao_protocol.py`：二进制帧编解码
+- [x] 豆包客户端 `doubao_client.py`：WebSocket 连接/会话/音频流
+- [x] 语音对话节点 `voice_dialog_node.py`：麦克风采集 → 豆包 ASR/LLM/TTS → 扬声器播放
+- [ ] 语音对话 + 表情联动（根据对话内容/语气驱动表情）
+- [ ] 说话时嘴部动画（根据 TTS 音频振幅驱动嘴部舵机）
+- [ ] 情绪镜像 + 眼球追踪 + 语音对话联动
 - [ ] Launch 文件（一键启动）
