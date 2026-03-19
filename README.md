@@ -166,6 +166,7 @@ eye_node ──/face/servo_angles──→ driver_node → 硬件
 | `sample_rate_in` | `16000` | 麦克风采样率(Hz) |
 | `sample_rate_out` | `24000` | 播放采样率(Hz) |
 | `chunk_size` | `3200` | 每次采集帧数 |
+| `mic_activation_threshold` | `0.08` | 麦克风收音阈值（0.0~1.0） |
 
 ---
 
@@ -348,7 +349,11 @@ ros2 run face_robot_driver voice_dialog
 # 自定义音色或角色
 ros2 run face_robot_driver voice_dialog --ros-args \
   -p speaker:=zh_female_wanwanxiaohe_moon_bigtts \
-  -p system_role:="你是一个可爱的机器人，说话简短有趣。"
+  -p system_role:="你是一个风趣幽默的助理，说话幽默活泼生动、有人情味"
+
+# 调高收音阈值，减少环境噪声误触发
+ros2 run face_robot_driver voice_dialog --ros-args \
+  -p mic_activation_threshold:=0.10
 ```
 
 **文字模式 — 通过话题输入文字**
@@ -368,6 +373,15 @@ ros2 topic echo /face/voice/status       # 连接状态
 ```
 
 `audio` 模式下节点会先播放默认欢迎语，收到 `/face/voice/status = input_ready` 后才开始接收后续输入，避免欢迎语 TTS 与用户请求重叠。
+
+`audio` 模式现在采用半双工策略：机器人播报期间不上传麦克风音频；只有在机器人回复结束后，才重新打开收音。
+
+`mic_activation_threshold` 表示“麦克风收音阈值”：只有麦克风输入音量超过该值，音频才会被上传给豆包，用于过滤环境噪声。
+
+调参建议：
+- 如果轻微环境噪声、碰桌子、键盘声就会误触发收音，增大 `mic_activation_threshold`，例如从 `0.08` 调到 `0.10` 或 `0.12`。
+- 如果你必须很大声说话才能被识别，减小 `mic_activation_threshold`，例如调到 `0.05`。
+- 终端出现 `本地收音触发: level=... threshold=...` 时，可以根据 `level` 观察当前说话音量的大致范围，再决定往上或往下调。
 
 ### 急停与恢复
 

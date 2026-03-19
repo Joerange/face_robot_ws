@@ -25,9 +25,11 @@
   sample_rate_in    int    麦克风采样率（默认 16000）
   sample_rate_out   int    播放采样率（默认 24000）
   chunk_size        int    每次采集帧数（默认 3200，即 200ms@16kHz）
+  mic_activation_threshold  float  麦克风收音阈值（0.0~1.0）
 """
 
 import asyncio
+import audioop
 import queue
 import subprocess
 import threading
@@ -48,12 +50,13 @@ class VoiceDialogNode(Node):
         self.declare_parameter('access_key', 'iU76WCb5fJU1w_mmdiTnyAZOqlJVJLpF')
         self.declare_parameter('speaker', 'zh_male_yunzhou_jupiter_bigtts')
         self.declare_parameter('system_role',
-                               '你是一个友好的机器人助手，回答简洁明了，每次回复控制在两三句话以内。')
+                               '你是一个友好的机器人助手，回答生动有人情味。')
         self.declare_parameter('bot_name', '')
         self.declare_parameter('input_mode', 'audio')
         self.declare_parameter('sample_rate_in', 16000)
         self.declare_parameter('sample_rate_out', 24000)
         self.declare_parameter('chunk_size', 3200)
+        self.declare_parameter('mic_activation_threshold', 0.05)
 
         self._app_id = self.get_parameter('app_id').value
         self._access_key = self.get_parameter('access_key').value
@@ -64,6 +67,9 @@ class VoiceDialogNode(Node):
         self._sr_in = self.get_parameter('sample_rate_in').value
         self._sr_out = self.get_parameter('sample_rate_out').value
         self._chunk = self.get_parameter('chunk_size').value
+        self._mic_activation_threshold = float(
+            self.get_parameter('mic_activation_threshold').value)
+        self._mic_activation_threshold = max(0.0, min(1.0, self._mic_activation_threshold))
 
         # --- 发布 ---
         self._pub_user = self.create_publisher(String, '/face/voice/user_text', 10)
@@ -79,6 +85,8 @@ class VoiceDialogNode(Node):
         self._audio_queue = queue.Queue(maxsize=200)
         self._playing = True
         self._user_speaking = False
+        self._tts_playing = False
+        self._speech_gate_active = False
 
         # --- aplay 子进程播放 (避免 pyaudio write 兼容性问题) ---
         self._aplay_proc = subprocess.Popen(
@@ -101,7 +109,8 @@ class VoiceDialogNode(Node):
 
         self.get_logger().info(
             f'语音对话节点已启动  mode={self._input_mode}  '
-            f'app_id={self._app_id}  speaker={self._speaker}')
+            f'app_id={self._app_id}  speaker={self._speaker}  '
+            f'mic_activation_threshold={self._mic_activation_threshold:.3f}')
 
     # ------------------------------------------------------------------
     # 文字输入回调（ROS 主线程）
@@ -229,6 +238,9 @@ class VoiceDialogNode(Node):
                     audio_data = arecord.stdout.read(chunk_bytes)
                     if not audio_data:
                         break
+                    if not self._should_send_audio(audio_data):
+                        await asyncio.sleep(0.01)
+                        continue
                     await client.send_audio(audio_data)
                     await asyncio.sleep(0.01)
                 except Exception as e:
@@ -259,13 +271,33 @@ class VoiceDialogNode(Node):
     # 回调（从 asyncio 线程调用）
     # ------------------------------------------------------------------
 
+    def _should_send_audio(self, pcm_data: bytes) -> bool:
+        if self._tts_playing:
+            self._speech_gate_active = False
+            return False
+
+        if self._speech_gate_active:
+            return True
+
+        level = audioop.rms(pcm_data, 2) / 32768.0
+
+        if level >= self._mic_activation_threshold:
+            if not self._speech_gate_active:
+                self.get_logger().info(
+                    f'本地收音触发: level={level:.3f} threshold={self._mic_activation_threshold:.3f}'
+                )
+            self._speech_gate_active = True
+            return True
+        return False
+
     def _on_audio(self, pcm_data: bytes):
         """收到 TTS 音频数据。"""
-        if not self._user_speaking:
-            try:
-                self._audio_queue.put_nowait(pcm_data)
-            except queue.Full:
-                pass  # 丢弃溢出数据
+        self._tts_playing = True
+        self._speech_gate_active = False
+        try:
+            self._audio_queue.put_nowait(pcm_data)
+        except queue.Full:
+            pass  # 丢弃溢出数据
 
     def _on_user_text(self, text: str, is_final: bool):
         """收到 ASR 识别文本。"""
@@ -297,8 +329,14 @@ class VoiceDialogNode(Node):
                     self._audio_queue.get_nowait()
                 except queue.Empty:
                     break
+        elif status == 'connected':
+            self._speech_gate_active = False
+        elif status == 'input_ready':
+            self._speech_gate_active = False
         elif status == 'tts_ended':
             self._user_speaking = False
+            self._tts_playing = False
+            self._speech_gate_active = False
 
     # ------------------------------------------------------------------
     # 销毁
